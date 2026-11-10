@@ -1,0 +1,4 @@
+version,page_hit_rate,average_keyword_recall,average_retrieval_time
+V2_FAISS,47.37,79.44,0.0189
+V3_CHROMADB,47.37,79.44,0.0229
+V4_RERANKING,84.21,84.93,0.7978

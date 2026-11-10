@@ -1,0 +1,61 @@
+version,question,expected_evidence,expected_page,retrieved_pages,page_hit,keyword_recall,retrieval_time_seconds
+V2_FAISS,Did global electric car sales exceed 17 million in 2024?,Page 15: Global sales exceeded 17 million in 2024.,15.0,"15, 10, 26, 69",True,1.0,0.1211
+V2_FAISS,Did China sell more than 11 million electric cars in 2024?,Page 15: China sold over 11 million electric cars.,15.0,"16, 10, 31, 26",False,0.875,0.0157
+V2_FAISS,Did electric cars account for almost half of all car sales in China in 2024?,Page 16: China's electric car sales share was almost 50%.,16.0,"16, 10, 10, 49",True,0.8889,0.0212
+V2_FAISS,Did electric car sales in Europe grow rapidly in 2024?,Page 10: European electric car sales stagnated in 2024.,10.0,"15, 17, 66, 26",False,0.875,0.0108
+V2_FAISS,Did electric car sales in the United States increase by about 10% in 2024?,Page 18: US electric car sales grew by about 10%.,18.0,"15, 25, 84, 20",False,0.7778,0.0158
+V2_FAISS,Did electric car sales in Brazil more than double in 2024?,"Page 20: Brazil sold nearly 125000 electric cars, more than twice the 2023 figure.",20.0,"10, 23, 20, 20",True,0.8182,0.0131
+V2_FAISS,Did India reach a 20% electric car sales share in 2024?,Page 20: India's electric car sales share was approximately 2%.,20.0,"25, 20, 22, 94",True,0.875,0.0138
+V2_FAISS,Did electric car sales in emerging and developing economies grow by over 60% in 2024?,Page 20: Sales increased by over 60% year-on-year.,20.0,"20, 25, 10, 15",True,1.0,0.0123
+V2_FAISS,Did China account for 40% of global electric car exports in 2024?,"Page 33: China accounted for 40% of global exports, nearly 1.25 million cars.",33.0,"36, 12, 16, 34",False,0.9091,0.0129
+V2_FAISS,Did the global trade of electric cars decrease in 2024?,Page 12: Global electric car trade increased by 20% in 2024.,12.0,"35, 15, 16, 84",False,0.8889,0.0122
+V2_FAISS,Were battery electric cars cheaper than conventional cars in every major market in 2024?,Page 12: BEVs remained 20% more expensive in Germany and 30% more expensive in the United States.,12.0,"51, 48, 53, 13",False,0.7,0.013
+V2_FAISS,Were two-thirds of electric cars sold in China in 2024 priced below conventional equivalents?,"Page 13: Two-thirds were priced lower than conventional equivalents, excluding incentives.",13.0,"13, 16, 31, 50",True,0.9,0.0151
+V2_FAISS,Did public charging stations double over the two years before the report?,Page 13: Public charging stations doubled in the past two years.,13.0,"114, 115, 100, 100",False,0.3333,0.0124
+V2_FAISS,Did more than three-quarters of European highways have a fast-charging station at least every 50 kilometres?,Page 13: Over three-quarters of European highways had this coverage.,13.0,"13, 110, 111, 110",True,0.875,0.0173
+V2_FAISS,Did electric trucks account for nearly 20% of total truck sales globally in 2024?,Page 14: Electric trucks accounted for close to 2% of total truck sales.,14.0,"68, 69, 68, 69",False,0.5556,0.0114
+V2_FAISS,Was the purchase price of battery electric heavy-duty trucks two to three times higher than equivalent diesel trucks in major markets?,Page 14: The report states that purchase prices remained two to three times higher.,14.0,"14, 72, 73, 71",True,0.8182,0.0154
+V2_FAISS,Did China account for more than 70% of global electric car production?,Page 12: China was responsible for more than 70% of global production.,12.0,"31, 12, 16, 10",True,1.0,0.0124
+V2_FAISS,Did global electric car sales exceed 20 million in the first quarter of 2025?,Page 24: More than 4 million electric cars were sold in Q1 2025.,24.0,"15, 10, 26, 25",False,0.75,0.0099
+V2_FAISS,Are electric cars projected to represent more than 40% of overall car sales in 2030 under today's policy settings?,Page 11: The projected share exceeds 40% in 2030.,11.0,"98, 96, 27, 96",False,0.7143,0.0118
+V2_FAISS,Does the report establish that electric vehicles produce zero emissions throughout their entire lifecycle?,The report does not provide sufficient lifecycle emissions evidence to establish this claim.,,"24, 24, 17, 154",,0.3333,0.0102
+V3_CHROMADB,Did global electric car sales exceed 17 million in 2024?,Page 15: Global sales exceeded 17 million in 2024.,15.0,"15, 10, 26, 69",True,1.0,0.0563
+V3_CHROMADB,Did China sell more than 11 million electric cars in 2024?,Page 15: China sold over 11 million electric cars.,15.0,"16, 10, 31, 26",False,0.875,0.0183
+V3_CHROMADB,Did electric cars account for almost half of all car sales in China in 2024?,Page 16: China's electric car sales share was almost 50%.,16.0,"16, 10, 10, 49",True,0.8889,0.0177
+V3_CHROMADB,Did electric car sales in Europe grow rapidly in 2024?,Page 10: European electric car sales stagnated in 2024.,10.0,"15, 17, 66, 26",False,0.875,0.0134
+V3_CHROMADB,Did electric car sales in the United States increase by about 10% in 2024?,Page 18: US electric car sales grew by about 10%.,18.0,"15, 25, 84, 20",False,0.7778,0.0174
+V3_CHROMADB,Did electric car sales in Brazil more than double in 2024?,"Page 20: Brazil sold nearly 125000 electric cars, more than twice the 2023 figure.",20.0,"10, 23, 20, 20",True,0.8182,0.0161
+V3_CHROMADB,Did India reach a 20% electric car sales share in 2024?,Page 20: India's electric car sales share was approximately 2%.,20.0,"25, 20, 22, 94",True,0.875,0.0181
+V3_CHROMADB,Did electric car sales in emerging and developing economies grow by over 60% in 2024?,Page 20: Sales increased by over 60% year-on-year.,20.0,"20, 25, 10, 15",True,1.0,0.0159
+V3_CHROMADB,Did China account for 40% of global electric car exports in 2024?,"Page 33: China accounted for 40% of global exports, nearly 1.25 million cars.",33.0,"36, 12, 16, 34",False,0.9091,0.018
+V3_CHROMADB,Did the global trade of electric cars decrease in 2024?,Page 12: Global electric car trade increased by 20% in 2024.,12.0,"35, 15, 16, 84",False,0.8889,0.0167
+V3_CHROMADB,Were battery electric cars cheaper than conventional cars in every major market in 2024?,Page 12: BEVs remained 20% more expensive in Germany and 30% more expensive in the United States.,12.0,"51, 48, 53, 13",False,0.7,0.0197
+V3_CHROMADB,Were two-thirds of electric cars sold in China in 2024 priced below conventional equivalents?,"Page 13: Two-thirds were priced lower than conventional equivalents, excluding incentives.",13.0,"13, 16, 31, 50",True,0.9,0.0197
+V3_CHROMADB,Did public charging stations double over the two years before the report?,Page 13: Public charging stations doubled in the past two years.,13.0,"114, 115, 100, 100",False,0.3333,0.0183
+V3_CHROMADB,Did more than three-quarters of European highways have a fast-charging station at least every 50 kilometres?,Page 13: Over three-quarters of European highways had this coverage.,13.0,"13, 110, 111, 110",True,0.875,0.0183
+V3_CHROMADB,Did electric trucks account for nearly 20% of total truck sales globally in 2024?,Page 14: Electric trucks accounted for close to 2% of total truck sales.,14.0,"68, 69, 68, 69",False,0.5556,0.019
+V3_CHROMADB,Was the purchase price of battery electric heavy-duty trucks two to three times higher than equivalent diesel trucks in major markets?,Page 14: The report states that purchase prices remained two to three times higher.,14.0,"14, 72, 73, 71",True,0.8182,0.0224
+V3_CHROMADB,Did China account for more than 70% of global electric car production?,Page 12: China was responsible for more than 70% of global production.,12.0,"31, 12, 16, 10",True,1.0,0.0169
+V3_CHROMADB,Did global electric car sales exceed 20 million in the first quarter of 2025?,Page 24: More than 4 million electric cars were sold in Q1 2025.,24.0,"15, 10, 26, 25",False,0.75,0.02
+V3_CHROMADB,Are electric cars projected to represent more than 40% of overall car sales in 2030 under today's policy settings?,Page 11: The projected share exceeds 40% in 2030.,11.0,"98, 96, 27, 96",False,0.7143,0.022
+V3_CHROMADB,Does the report establish that electric vehicles produce zero emissions throughout their entire lifecycle?,The report does not provide sufficient lifecycle emissions evidence to establish this claim.,,"24, 24, 17, 154",,0.3333,0.0737
+V4_RERANKING,Did global electric car sales exceed 17 million in 2024?,Page 15: Global sales exceeded 17 million in 2024.,15.0,"15, 10, 26, 31, 16",True,1.0,0.6428
+V4_RERANKING,Did China sell more than 11 million electric cars in 2024?,Page 15: China sold over 11 million electric cars.,15.0,"10, 15, 26, 25, 68",True,1.0,0.6407
+V4_RERANKING,Did electric cars account for almost half of all car sales in China in 2024?,Page 16: China's electric car sales share was almost 50%.,16.0,"16, 10, 88, 16, 10",True,1.0,0.6899
+V4_RERANKING,Did electric car sales in Europe grow rapidly in 2024?,Page 10: European electric car sales stagnated in 2024.,10.0,"16, 25, 10, 17, 15",True,1.0,0.7117
+V4_RERANKING,Did electric car sales in the United States increase by about 10% in 2024?,Page 18: US electric car sales grew by about 10%.,18.0,"18, 10, 25, 15, 96",True,0.8889,0.7195
+V4_RERANKING,Did electric car sales in Brazil more than double in 2024?,"Page 20: Brazil sold nearly 125000 electric cars, more than twice the 2023 figure.",20.0,"23, 10, 20, 25, 56",True,0.8182,0.7446
+V4_RERANKING,Did India reach a 20% electric car sales share in 2024?,Page 20: India's electric car sales share was approximately 2%.,20.0,"20, 22, 25, 97, 94",True,0.875,1.0719
+V4_RERANKING,Did electric car sales in emerging and developing economies grow by over 60% in 2024?,Page 20: Sales increased by over 60% year-on-year.,20.0,"20, 11, 10, 10, 10",True,1.0,0.8085
+V4_RERANKING,Did China account for 40% of global electric car exports in 2024?,"Page 33: China accounted for 40% of global exports, nearly 1.25 million cars.",33.0,"34, 33, 12, 34, 35",True,1.0,0.7344
+V4_RERANKING,Did the global trade of electric cars decrease in 2024?,Page 12: Global electric car trade increased by 20% in 2024.,12.0,"33, 17, 35, 12, 15",True,0.8889,0.7199
+V4_RERANKING,Were battery electric cars cheaper than conventional cars in every major market in 2024?,Page 12: BEVs remained 20% more expensive in Germany and 30% more expensive in the United States.,12.0,"13, 55, 51, 56, 51",False,0.7,0.8179
+V4_RERANKING,Were two-thirds of electric cars sold in China in 2024 priced below conventional equivalents?,"Page 13: Two-thirds were priced lower than conventional equivalents, excluding incentives.",13.0,"13, 51, 16, 56, 88",True,0.9,0.7214
+V4_RERANKING,Did public charging stations double over the two years before the report?,Page 13: Public charging stations doubled in the past two years.,13.0,"99, 114, 115, 116, 99",False,0.6667,0.6887
+V4_RERANKING,Did more than three-quarters of European highways have a fast-charging station at least every 50 kilometres?,Page 13: Over three-quarters of European highways had this coverage.,13.0,"13, 110, 110, 108, 111",True,0.875,0.7164
+V4_RERANKING,Did electric trucks account for nearly 20% of total truck sales globally in 2024?,Page 14: Electric trucks accounted for close to 2% of total truck sales.,14.0,"14, 68, 88, 69, 68",True,0.7778,1.7622
+V4_RERANKING,Was the purchase price of battery electric heavy-duty trucks two to three times higher than equivalent diesel trucks in major markets?,Page 14: The report states that purchase prices remained two to three times higher.,14.0,"14, 72, 73, 73, 160",True,0.9091,0.7617
+V4_RERANKING,Did China account for more than 70% of global electric car production?,Page 12: China was responsible for more than 70% of global production.,12.0,"31, 12, 12, 16, 88",True,1.0,0.7484
+V4_RERANKING,Did global electric car sales exceed 20 million in the first quarter of 2025?,Page 24: More than 4 million electric cars were sold in Q1 2025.,24.0,"26, 15, 10, 25, 10",False,0.75,0.7255
+V4_RERANKING,Are electric cars projected to represent more than 40% of overall car sales in 2030 under today's policy settings?,Page 11: The projected share exceeds 40% in 2030.,11.0,"96, 98, 11, 91, 88",True,0.7143,0.7162
+V4_RERANKING,Does the report establish that electric vehicles produce zero emissions throughout their entire lifecycle?,The report does not provide sufficient lifecycle emissions evidence to establish this claim.,,"24, 24, 73, 17, 11",,0.2222,0.8136
