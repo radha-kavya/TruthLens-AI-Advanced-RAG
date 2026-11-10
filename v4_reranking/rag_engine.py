@@ -1,6 +1,7 @@
 
 import os
 import re
+import tempfile
 from pathlib import Path
 
 import streamlit as st
@@ -14,6 +15,7 @@ from langchain_groq import ChatGroq
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from sentence_transformers import CrossEncoder
 
@@ -36,61 +38,245 @@ MAX_PAGES_PER_SOURCE = 2
 
 RELEVANCE_MARGIN = 3.0
 
+EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+
+RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+
 
 # ==================================================
-# 2. LOAD EXISTING RAG RESOURCES
+# 2. LOAD GROQ API KEY
+# ==================================================
+
+def get_groq_api_key():
+
+    api_key = os.getenv("GROQ_API_KEY")
+
+    if not api_key:
+
+        try:
+            api_key = st.secrets["GROQ_API_KEY"]
+
+        except Exception:
+            api_key = None
+
+    if not api_key:
+
+        raise ValueError(
+            "GROQ_API_KEY is missing. "
+            "Configure it in Streamlit Cloud Secrets."
+        )
+
+    os.environ["GROQ_API_KEY"] = api_key
+
+    return api_key
+
+
+# ==================================================
+# 3. LOAD PDF DOCUMENTS
+# ==================================================
+
+def load_pdf_documents(pdf_files):
+
+    all_documents = []
+
+    for pdf_file in pdf_files:
+
+        loader = PyPDFLoader(str(pdf_file))
+
+        pages = loader.load()
+
+        for page in pages:
+
+            page.metadata["source"] = pdf_file.name
+
+            page.metadata["document_type"] = "PDF"
+
+        all_documents.extend(pages)
+
+    return all_documents
+
+
+# ==================================================
+# 4. CREATE CHROMADB
+# ==================================================
+
+def create_vector_database(pdf_files, embeddings):
+
+    st.info(
+        "Creating the document vector database. "
+        "This may take several minutes on the first run."
+    )
+
+    # Load all PDF pages.
+    documents = load_pdf_documents(pdf_files)
+
+    if not documents:
+
+        raise ValueError(
+            "No content could be extracted from the PDF documents."
+        )
+
+    # Split documents into chunks.
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=150
+    )
+
+    chunks = text_splitter.split_documents(documents)
+
+    if not chunks:
+
+        raise ValueError(
+            "Document chunking produced no chunks."
+        )
+
+    # Streamlit Cloud application files may be read-only.
+    # Therefore, use a writable temporary directory.
+    deployment_path = (
+        Path(tempfile.gettempdir())
+        / "truthlens_chroma_db"
+    )
+
+    vector_store = Chroma.from_documents(
+        documents=chunks,
+        embedding=embeddings,
+        collection_name=COLLECTION_NAME,
+        persist_directory=str(deployment_path)
+    )
+
+    return vector_store, len(chunks)
+
+
+# ==================================================
+# 5. LOAD OR CREATE CHROMADB
+# ==================================================
+
+def load_or_create_vector_database(pdf_files, embeddings):
+
+    vector_store = None
+
+    # Try loading an existing local database.
+    if CHROMA_PATH.exists():
+
+        try:
+
+            existing_store = Chroma(
+                collection_name=COLLECTION_NAME,
+                persist_directory=str(CHROMA_PATH),
+                embedding_function=embeddings
+            )
+
+            stored_count = existing_store._collection.count()
+
+            if stored_count > 0:
+
+                vector_store = existing_store
+
+        except Exception:
+
+            vector_store = None
+
+    # Create a fresh database if missing or empty.
+    if vector_store is None:
+
+        vector_store, chunk_count = create_vector_database(
+            pdf_files,
+            embeddings
+        )
+
+        st.success(
+            f"ChromaDB created successfully with {chunk_count} chunks."
+        )
+
+    stored_chunks = vector_store._collection.count()
+
+    if stored_chunks == 0:
+
+        raise ValueError(
+            "ChromaDB collection is empty."
+        )
+
+    return vector_store, stored_chunks
+
+
+# ==================================================
+# 6. LOAD ALL RAG RESOURCES
 # ==================================================
 
 @st.cache_resource(show_spinner="Loading TruthLens AI models...")
 def load_resources():
 
-    groq_api_key = os.getenv("GROQ_API_KEY")
+    # ----------------------------------------------
+    # GROQ API KEY
+    # ----------------------------------------------
 
-    if not groq_api_key:
-        raise ValueError(
-            "GROQ_API_KEY is missing in v4_reranking/.env"
-        )
+    groq_api_key = get_groq_api_key()
 
-    pdf_files = sorted(DOCUMENTS_PATH.glob("*.pdf"))
+    # ----------------------------------------------
+    # FIND PDF DOCUMENTS
+    # ----------------------------------------------
+
+    pdf_files = sorted(
+        DOCUMENTS_PATH.glob("*.pdf")
+    )
 
     if not pdf_files:
+
         raise FileNotFoundError(
-            "No PDF documents found in the documents folder."
+            "No PDF documents found inside the documents folder."
         )
 
-    if not CHROMA_PATH.exists():
+    if len(pdf_files) < 3:
+
         raise FileNotFoundError(
-            "ChromaDB does not exist. Run your original main.py "
-            "once to create the vector database."
+            f"Expected 3 PDF documents, but found {len(pdf_files)}."
         )
+
+    # ----------------------------------------------
+    # LOAD EMBEDDING MODEL
+    # ----------------------------------------------
 
     embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2",
-        model_kwargs={"device": "cpu"},
-        encode_kwargs={"normalize_embeddings": True}
+        model_name=EMBEDDING_MODEL,
+        model_kwargs={
+            "device": "cpu"
+        },
+        encode_kwargs={
+            "normalize_embeddings": True
+        }
     )
 
-    vector_store = Chroma(
-        collection_name=COLLECTION_NAME,
-        persist_directory=str(CHROMA_PATH),
-        embedding_function=embeddings
+    # ----------------------------------------------
+    # LOAD OR CREATE VECTOR DATABASE
+    # ----------------------------------------------
+
+    vector_store, stored_chunks = load_or_create_vector_database(
+        pdf_files,
+        embeddings
     )
 
-    stored_chunks = vector_store._collection.count()
-
-    if stored_chunks == 0:
-        raise ValueError(
-            "The ChromaDB collection is empty. "
-            "Run the original main.py to create the index."
-        )
+    # ----------------------------------------------
+    # CREATE RETRIEVER
+    # ----------------------------------------------
 
     retriever = vector_store.as_retriever(
-        search_kwargs={"k": 20}
+        search_kwargs={
+            "k": 20
+        }
     )
 
+    # ----------------------------------------------
+    # LOAD CROSS-ENCODER
+    # ----------------------------------------------
+
     reranker = CrossEncoder(
-        "cross-encoder/ms-marco-MiniLM-L-6-v2"
+        RERANKER_MODEL,
+        device="cpu"
     )
+
+    # ----------------------------------------------
+    # LOAD GROQ LLM
+    # ----------------------------------------------
 
     llm = ChatGroq(
         model="openai/gpt-oss-20b",
@@ -110,12 +296,13 @@ def load_resources():
 
 
 # ==================================================
-# 3. EVIDENCE QUALITY VALIDATION
+# 7. EVIDENCE QUALITY VALIDATION
 # ==================================================
 
 def validate_evidence(claim, docs, llm):
 
     validated_docs = []
+
     directly_relevant_docs = []
 
     quality_counts = {
@@ -198,12 +385,12 @@ Return only one category.
 
         quality_counts[category] += 1
 
-        # Store quality in the document metadata.
         doc.metadata["evidence_quality"] = category
 
         if category == "DIRECTLY RELEVANT":
 
             directly_relevant_docs.append(doc)
+
             validated_docs.append(doc)
 
         elif category == "SUPPORTING CONTEXT":
@@ -218,38 +405,56 @@ Return only one category.
 
 
 # ==================================================
-# 4. ASSIGN EVIDENCE IDS
+# 8. ASSIGN EVIDENCE IDS
 # ==================================================
 
 def create_evidence_records(validated_docs):
 
     evidence_records = []
 
-    for index, doc in enumerate(validated_docs, start=1):
+    for index, doc in enumerate(
+        validated_docs,
+        start=1
+    ):
 
-        source = doc.metadata.get("source", "Unknown")
-        page = doc.metadata.get("page", "Unknown")
+        source = doc.metadata.get(
+            "source",
+            "Unknown"
+        )
+
+        page = doc.metadata.get(
+            "page",
+            "Unknown"
+        )
 
         page_number = (
-            page + 1 if isinstance(page, int) else page
+            page + 1
+            if isinstance(page, int)
+            else page
         )
 
         evidence_records.append({
+
             "id": f"E{index}",
+
             "source": source,
+
             "page": page_number,
+
             "category": doc.metadata.get(
                 "evidence_quality",
                 "UNRECOGNIZED"
             ),
+
             "text": doc.page_content
+
         })
 
     return evidence_records
 
 
 # ==================================================
-# 5. PREPARE EVIDENCE CONTEXT
+# 9. PREPARE EVIDENCE CONTEXT
 # ==================================================
 
 def prepare_evidence_context(evidence_records):
@@ -273,7 +478,7 @@ Evidence:
 
 
 # ==================================================
-# 6. FACT-CHECKING PROMPT
+# 10. FACT-CHECKING PROMPT
 # ==================================================
 
 prompt = ChatPromptTemplate.from_template("""
@@ -296,6 +501,7 @@ IMPORTANT CITATION RULES:
 5. Cite all relevant evidence items when appropriate.
 6. Do not cite evidence that does not support the statement.
 7. If there is insufficient evidence, say so clearly.
+8. Always write evidence IDs using square brackets.
 
 Choose exactly one verdict:
 
@@ -326,7 +532,7 @@ Citations must use the format [E1], [E2], etc.
 
 
 # ==================================================
-# 7. CITATION VERIFICATION
+# 11. CITATION VERIFICATION
 # ==================================================
 
 def verify_citations(response, evidence_records):
@@ -337,22 +543,33 @@ def verify_citations(response, evidence_records):
     }
 
     cited_ids = set(
-        re.findall(r"\[(E\d+)\]", response)
+        re.findall(
+            r"(?<![A-Za-z0-9])\[?(E\d+)\]?(?![A-Za-z0-9])",
+            response,
+            re.IGNORECASE
+        )
     )
+
+    cited_ids = {
+        item.upper()
+        for item in cited_ids
+    }
 
     invalid_ids = cited_ids - valid_ids
 
     if not cited_ids:
-        return False, [], sorted(invalid_ids)
 
-    if invalid_ids:
-        return False, sorted(cited_ids), sorted(invalid_ids)
+        return False, [], []
 
-    return True, sorted(cited_ids), []
+    return (
+        len(invalid_ids) == 0,
+        sorted(cited_ids),
+        sorted(invalid_ids)
+    )
 
 
 # ==================================================
-# 8. EXTRACT VERDICT
+# 12. EXTRACT VERDICT
 # ==================================================
 
 def extract_verdict(response):
@@ -370,13 +587,52 @@ def extract_verdict(response):
     )
 
     if match:
+
         return match.group(1).title()
 
     return "Verdict not identified"
 
 
 # ==================================================
-# 9. MAIN CLAIM ANALYSIS FUNCTION
+# 13. EMPTY RESULT HELPER
+# ==================================================
+
+def create_empty_result(
+    claim,
+    report,
+    pdf_count,
+    stored_chunks,
+    retrieved_chunks=0,
+    relevant_chunks=0,
+    evidence_pages=0,
+    validated_pages=0,
+    quality_counts=None
+):
+
+    return {
+        "claim": claim,
+        "verdict": "Insufficient Evidence",
+        "confidence": "Low",
+        "report": report,
+        "citation_success": False,
+        "cited_ids": [],
+        "invalid_ids": [],
+        "evidence_records": [],
+        "quality_counts": quality_counts or {},
+        "ranked_results": [],
+        "stats": {
+            "pdf_files": pdf_count,
+            "retrieved_chunks": retrieved_chunks,
+            "relevant_chunks": relevant_chunks,
+            "evidence_pages": evidence_pages,
+            "validated_pages": validated_pages,
+            "stored_chunks": stored_chunks
+        }
+    }
+
+
+# ==================================================
+# 14. MAIN CLAIM ANALYSIS FUNCTION
 # ==================================================
 
 def analyze_claim(claim):
@@ -384,14 +640,26 @@ def analyze_claim(claim):
     claim = claim.strip()
 
     if not claim:
-        raise ValueError("Please enter a valid claim.")
+
+        raise ValueError(
+            "Please enter a valid claim."
+        )
+
+    # ----------------------------------------------
+    # LOAD RESOURCES
+    # ----------------------------------------------
 
     resources = load_resources()
 
     retriever = resources["retriever"]
+
     reranker = resources["reranker"]
+
     llm = resources["llm"]
+
     pdf_files = resources["pdf_files"]
+
+    stored_chunks = resources["stored_chunks"]
 
     # ----------------------------------------------
     # RETRIEVAL
@@ -401,26 +669,12 @@ def analyze_claim(claim):
 
     if not retrieved_docs:
 
-        return {
-            "claim": claim,
-            "verdict": "Insufficient Evidence",
-            "confidence": "Low",
-            "report": "No relevant documents were retrieved.",
-            "citation_success": False,
-            "cited_ids": [],
-            "invalid_ids": [],
-            "evidence_records": [],
-            "quality_counts": {},
-            "ranked_results": [],
-            "stats": {
-                "pdf_files": len(pdf_files),
-                "retrieved_chunks": 0,
-                "relevant_chunks": 0,
-                "evidence_pages": 0,
-                "validated_pages": 0,
-                "stored_chunks": resources["stored_chunks"]
-            }
-        }
+        return create_empty_result(
+            claim,
+            "No relevant documents were retrieved.",
+            len(pdf_files),
+            stored_chunks
+        )
 
     # ----------------------------------------------
     # CROSS-ENCODER RERANKING
@@ -463,14 +717,25 @@ def analyze_claim(claim):
     # ----------------------------------------------
 
     top_docs = []
+
     seen_pages = set()
+
     source_counts = {}
 
-    # First pass: maximum two pages per PDF.
+    # First pass:
+    # Maximum two pages per PDF.
+
     for score, doc in relevant_results:
 
-        source = doc.metadata.get("source", "Unknown")
-        page = doc.metadata.get("page", "Unknown")
+        source = doc.metadata.get(
+            "source",
+            "Unknown"
+        )
+
+        page = doc.metadata.get(
+            "page",
+            "Unknown"
+        )
 
         page_key = (source, page)
 
@@ -481,6 +746,7 @@ def analyze_claim(claim):
             continue
 
         seen_pages.add(page_key)
+
         top_docs.append(doc)
 
         source_counts[source] = (
@@ -490,13 +756,22 @@ def analyze_claim(claim):
         if len(top_docs) == MAX_EVIDENCE_PAGES:
             break
 
-    # Second pass: fill remaining slots.
+    # Second pass:
+    # Fill remaining evidence slots.
+
     if len(top_docs) < MAX_EVIDENCE_PAGES:
 
         for score, doc in relevant_results:
 
-            source = doc.metadata.get("source", "Unknown")
-            page = doc.metadata.get("page", "Unknown")
+            source = doc.metadata.get(
+                "source",
+                "Unknown"
+            )
+
+            page = doc.metadata.get(
+                "page",
+                "Unknown"
+            )
 
             page_key = (source, page)
 
@@ -504,6 +779,7 @@ def analyze_claim(claim):
                 continue
 
             seen_pages.add(page_key)
+
             top_docs.append(doc)
 
             source_counts[source] = (
@@ -519,26 +795,14 @@ def analyze_claim(claim):
 
     if not top_docs:
 
-        return {
-            "claim": claim,
-            "verdict": "Insufficient Evidence",
-            "confidence": "Low",
-            "report": "No evidence passed the relevance filter.",
-            "citation_success": False,
-            "cited_ids": [],
-            "invalid_ids": [],
-            "evidence_records": [],
-            "quality_counts": {},
-            "ranked_results": [],
-            "stats": {
-                "pdf_files": len(pdf_files),
-                "retrieved_chunks": len(retrieved_docs),
-                "relevant_chunks": len(relevant_results),
-                "evidence_pages": 0,
-                "validated_pages": 0,
-                "stored_chunks": resources["stored_chunks"]
-            }
-        }
+        return create_empty_result(
+            claim,
+            "No evidence passed the relevance filter.",
+            len(pdf_files),
+            stored_chunks,
+            len(retrieved_docs),
+            len(relevant_results)
+        )
 
     # ----------------------------------------------
     # EVIDENCE QUALITY VALIDATION
@@ -555,35 +819,26 @@ def analyze_claim(claim):
     )
 
     # ----------------------------------------------
-    # V4.3 INSUFFICIENT EVIDENCE CHECK
+    # INSUFFICIENT EVIDENCE CHECK
     # ----------------------------------------------
 
     if quality_counts["DIRECTLY RELEVANT"] == 0:
 
-        return {
-            "claim": claim,
-            "verdict": "Insufficient Evidence",
-            "confidence": "Low",
-            "report": (
+        return create_empty_result(
+            claim,
+            (
                 "No directly relevant evidence passed quality "
                 "validation. Supporting context alone cannot "
                 "establish whether the claim is true or false."
             ),
-            "citation_success": False,
-            "cited_ids": [],
-            "invalid_ids": [],
-            "evidence_records": [],
-            "quality_counts": quality_counts,
-            "ranked_results": [],
-            "stats": {
-                "pdf_files": len(pdf_files),
-                "retrieved_chunks": len(retrieved_docs),
-                "relevant_chunks": len(relevant_results),
-                "evidence_pages": len(top_docs),
-                "validated_pages": len(validated_docs),
-                "stored_chunks": resources["stored_chunks"]
-            }
-        }
+            len(pdf_files),
+            stored_chunks,
+            len(retrieved_docs),
+            len(relevant_results),
+            len(top_docs),
+            len(validated_docs),
+            quality_counts
+        )
 
     # ----------------------------------------------
     # ASSIGN EVIDENCE IDS
@@ -608,8 +863,11 @@ def analyze_claim(claim):
     chain = prompt | llm | StrOutputParser()
 
     response = chain.invoke({
+
         "claim": claim,
+
         "context": context
+
     })
 
     # ----------------------------------------------
@@ -626,14 +884,22 @@ def analyze_claim(claim):
     )
 
     # ----------------------------------------------
-    # QUALITATIVE CONFIDENCE (V4.3)
+    # QUALITATIVE CONFIDENCE
     # ----------------------------------------------
 
-    direct_count = quality_counts["DIRECTLY RELEVANT"]
+    direct_count = quality_counts[
+        "DIRECTLY RELEVANT"
+    ]
 
     direct_source_count = len({
-        doc.metadata.get("source", "Unknown")
+
+        doc.metadata.get(
+            "source",
+            "Unknown"
+        )
+
         for doc in directly_relevant_docs
+
     })
 
     if (
@@ -663,17 +929,33 @@ def analyze_claim(claim):
         start=1
     ):
 
-        page = doc.metadata.get("page", "Unknown")
+        page = doc.metadata.get(
+            "page",
+            "Unknown"
+        )
 
         page_number = (
-            page + 1 if isinstance(page, int) else page
+            page + 1
+            if isinstance(page, int)
+            else page
         )
 
         ranking_records.append({
+
             "rank": index,
-            "score": round(float(score), 4),
-            "source": doc.metadata.get("source", "Unknown"),
+
+            "score": round(
+                float(score),
+                4
+            ),
+
+            "source": doc.metadata.get(
+                "source",
+                "Unknown"
+            ),
+
             "page": page_number
+
         })
 
     # ----------------------------------------------
@@ -681,22 +963,41 @@ def analyze_claim(claim):
     # ----------------------------------------------
 
     return {
+
         "claim": claim,
+
         "verdict": extract_verdict(response),
+
         "confidence": confidence_level,
+
         "report": response,
+
         "citation_success": citation_success,
+
         "cited_ids": cited_ids,
+
         "invalid_ids": invalid_ids,
+
         "evidence_records": evidence_records,
+
         "quality_counts": quality_counts,
+
         "ranked_results": ranking_records,
+
         "stats": {
+
             "pdf_files": len(pdf_files),
+
             "retrieved_chunks": len(retrieved_docs),
+
             "relevant_chunks": len(relevant_results),
+
             "evidence_pages": len(top_docs),
+
             "validated_pages": len(validated_docs),
-            "stored_chunks": resources["stored_chunks"]
+
+            "stored_chunks": stored_chunks
+
         }
+
     }
